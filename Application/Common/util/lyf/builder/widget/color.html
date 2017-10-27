@@ -1,0 +1,30 @@
+<case value="color">
+    <div class="form-group item_{$[type]form.name} {$[type]form.extra.class|default=''}">
+        <label class="left control-label">
+            <?php if($[type]form['extra']['must']): ?>
+                <span style="color: red;">*</span>
+            <?php endif; ?>
+            <span>{$[type]form.title}：</span>
+        </label>
+        <div class="right">
+            <link rel="Stylesheet" type="text/css" href="__PUBLIC__/libs/jpicker/css/jpicker-1.1.6.min.css" />
+            <link rel="Stylesheet" type="text/css" href="__PUBLIC__/libs/jpicker/jPicker.css" />
+            <script src="__PUBLIC__/libs/jpicker/jpicker-1.1.6.js" type="text/javascript"></script>
+            <!--------------用php输出js语句，把name值传给js------>
+            <?php echo '<script type="text/javascript">var formname ="'.$[type]form['name'].'"</script>'; ?>
+            <script type="text/javascript">
+                $(function()
+                  {
+                   $('#Binded').jPicker({window:{title:'Binded Example'},color:{active:new $.jPicker.Color({ahex:'000000ff'})}});
+                   
+                  });
+            </script>
+            <div style="position:relative;">
+                <input type="text" id="Binded" class="form-control input text" name="{$[type]form.name}" value="{$[type]form.value|default='000000'}" placeholder="{$[type]form.tip|default=''}" {$[type]form.extra.attr|default=''}>
+                <notempty name="[type]form.tip">
+                    <span class="check-tips text-muted small">{$[type]form.tip|default=''}</span>
+                </notempty>
+            </div>
+        </div>
+    </div>
+</case>

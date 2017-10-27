@@ -1,0 +1,117 @@
+<case value="bdmap_polygon">
+    <div class="form-group item_{$[type]form.name} {$[type]form.extra.class|default=''}">
+        <label class="left control-label">
+            <?php if($[type]form['extra']['must']): ?>
+                <span style="color: red;">*</span>
+            <?php endif; ?>
+            <span>{$[type]form.title}：</span>
+        </label>
+        <div class="right">
+            <input id="[type]{$group_k|default=''}_map_input_{$[type]k}" type="hidden" class="form-control input text" name="{$[type]form.name}" value="{$[type]form.value|default=''}" {$[type]form.extra.attr|default=''}>
+            <div id="[type]{$group_k|default=''}_bd_map_{$[type]k}" style="height:400px;width:100%;border:1px solid #bcbcbc;"></div>
+            <script type="text/javascript" src="//api.map.baidu.com/api?v=2.0&ak={:C('BDMAP_AK')}"></script>
+            <script type="text/javascript" src="//api.map.baidu.com/library/GeoUtils/1.2/src/GeoUtils_min.js"></script>
+            <script type="text/javascript">
+                $(function(){
+                    //设置配送范围
+                    function setRange(_point, _ppoints){
+                        var polygon = new BMap.Polygon(_ppoints, {strokeColor:"blue", strokeWeight:2, strokeOpacity:0.5});  //创建多边形
+                        map.addOverlay(polygon);   //增加多边形
+                        polygon.enableEditing();   //允许编辑
+                        polygon.addEventListener("lineupdate",function(e){
+                            var rangeArr = polygon.getPath();
+                            $("#[type]{$group_k|default=''}_map_input_{$[type]k}").val(JSON.stringify(rangeArr));
+                        });
+                    }
+
+                    //创建地图
+                    var zoom = 18;
+                    var point = new BMap.Point(113.63156,34.83794);
+                    var map = new BMap.Map('[type]{$group_k|default=''}_bd_map_{$[type]k}');
+
+                    //创建地址解析器实例
+                    var myGeo = new BMap.Geocoder();
+                    map.centerAndZoom(point, zoom);//设初始化地图。
+
+                    // 工具栏
+                    var top_left_control = new BMap.ScaleControl({anchor: BMAP_ANCHOR_TOP_LEFT});// 左上角，添加比例尺
+                    var top_left_navigation = new BMap.NavigationControl();  //左上角，添加默认缩放平移控件
+                    var top_right_navigation = new BMap.NavigationControl({anchor: BMAP_ANCHOR_TOP_RIGHT, type: BMAP_NAVIGATION_CONTROL_SMALL}); //右上角，仅包含平移和缩放按钮
+                    map.addControl(top_left_control);
+                    map.addControl(top_left_navigation);
+                    map.addControl(top_right_navigation);
+
+                    //设置版权控件位置
+                    var cr = new BMap.CopyrightControl({anchor: BMAP_ANCHOR_BOTTOM_RIGHT});
+                    map.addControl(cr); //添加版权控件
+                    var bs = map.getBounds(); //返回地图可视区域
+                    cr.addCopyright({id: 1, content: "<a target='_blank' href='https://www.lingyun.net' style='font-size:12px;'>零云</a>", bounds: bs});
+
+                    // 有默认值直接画出多边形区域没有则自动生成一个初步的多边形供调整拖动
+                    var val = '{$[type]form.value|default=''}';
+                    if (val) {
+                        // 定位
+                        var pts = $.parseJSON(val);
+                        var poi = new BMap.Point(pts[0].lng, pts[0].lat);
+                        map.centerAndZoom(poi, zoom);
+
+                        // 添加标注
+                        var marker = new BMap.Marker(poi);
+                        map.addOverlay(marker); // 将标注添加到地图中
+
+                        var polygon = new BMap.Polygon(pts, {strokeColor:"blue", strokeWeight:2, strokeOpacity:0.5});  //创建多边形
+                        map.addOverlay(polygon);   //增加多边形
+                        polygon.enableEditing();   //允许编辑
+                        polygon.addEventListener("lineupdate",function(e){
+                            var rangeArr = polygon.getPath();
+                            $("#[type]{$group_k|default=''}_map_input_{$[type]k}").val(JSON.stringify(rangeArr));
+                        });
+                    } else {
+                        myGeo.getPoint("<?php echo $[type]form['extra']['self']['city']?: '南京鼓楼'?>", function(poi){
+                            // 定位
+                            map.centerAndZoom(poi, zoom);
+
+                            // 添加标注
+                            var marker = new BMap.Marker(poi);
+                            map.addOverlay(marker); // 将标注添加到地图中
+
+                            // 设置多边形配送范围
+                            var pts = [];
+                            var pt1 = new BMap.Point(poi.lng - 0.001,poi.lat + 0.001);
+                            var pt2 = new BMap.Point(poi.lng + 0.001,poi.lat + 0.001);
+                            var pt3 = new BMap.Point(poi.lng + 0.001,poi.lat - 0.001);
+                            var pt4 = new BMap.Point(poi.lng - 0.001,poi.lat - 0.001);
+                            pts.push(pt1);
+                            pts.push(pt2);
+                            pts.push(pt3);
+                            pts.push(pt4);
+                            var polygon = new BMap.Polygon(pts, {strokeColor:"blue", strokeWeight:2, strokeOpacity:0.5});  //创建多边形
+                            map.addOverlay(polygon);   //增加多边形
+                            polygon.enableEditing();   //允许编辑
+                            polygon.addEventListener("lineupdate",function(e){
+                                var rangeArr = polygon.getPath();
+                                $("#[type]{$group_k|default=''}_map_input_{$[type]k}").val(JSON.stringify(rangeArr));
+                            });
+                        });
+                    }
+
+                    // 监听联动输入框，自动重新定位
+                    var auto = "{$[type]form['extra']['self']['auto']}";
+                    if (auto) {
+                        $(".item_{$[type]form['extra']['self']['auto']} input[name={$[type]form['extra']['self']['auto']}]").keyup(function() {
+                            var tmp = $(this).val();
+                            if (tmp) {
+                                //将地址解析结果显示在地图上，并调整地图视野。此过程为异步，所以要重设标注
+                                myGeo.getPoint(tmp, function(poi){
+                                    map.centerAndZoom(poi, zoom);
+                                    marker.setPosition(poi); //重调标注位置
+                                    try{document.getElementById('[type]{$group_k|default=''}_map_input_{$[type]k}').value = poi.lat + "," + poi.lng;}catch (ex) {}
+                                });
+                            }
+                        });
+                    }
+                });
+            </script>
+        </div>
+    </div>
+</case>

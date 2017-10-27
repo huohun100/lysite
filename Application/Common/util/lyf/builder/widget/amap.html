@@ -1,0 +1,99 @@
+<case value="amap">
+    <div class="form-group item_{$[type]form.name} {$[type]form.extra.class|default=''}">
+        <label class="left control-label">
+            <?php if($[type]form['extra']['must']): ?>
+            <span style="color: red;">*</span>
+            <?php endif; ?>
+            <span>{$[type]form.title}：</span>
+        </label>
+        <div class="right">
+            <input id="[type]{$group_k|default=''}_map_input_{$[type]k}" type="hidden" class="form-control input text" name="{$[type]form.name}" value="{$[type]form.value|default=''}" {$[type]form.extra.attr|default='' }>
+            <div id="[type]{$group_k|default=''}_amap_{$[type]k}" style="height:400px;width:100%;border:1px solid #bcbcbc;"></div>
+            <script type="text/javascript" src="http://webapi.amap.com/maps?v=1.3&key=d5cd69ecaf22da9e1f2f37edd8c744ef"></script>
+            <script type="text/javascript">
+                $(function() {
+                    //http://lbs.amap.com/api/javascript-api/summary
+                    var map = new AMap.Map('[type]{$group_k|default=""}_amap_{$[type]k}', {
+                        resizeEnable: true,
+                        zoom: 10,
+                        center: [118.771, 32.079]
+                    });
+                    // 添加地图组件
+                    AMap.plugin(['AMap.ToolBar', 'AMap.Scale', 'AMap.OverView', 'AMap.MapType', 'AMap.Geolocation'], function() {
+                        map.addControl(new AMap.ToolBar());
+                        map.addControl(new AMap.Scale());
+                        map.addControl(new AMap.OverView({ isOpen: true }));
+                        map.addControl(new AMap.MapType());
+                        map.addControl(new AMap.Geolocation());
+                    });
+
+                    // 启动时标注点
+                    var markers = [];
+                    var position_text = $("#[type]{$group_k|default=''}_map_input_{$[type]k}").val();
+                    if (position_text) {
+                        var position = position_text.split(',');
+                        marker = new AMap.Marker({
+                            position: [position[1], position[0]],
+                            title: '当前位置',
+                            map: map,
+                            animation: 'AMAP_ANIMATION_DROP',
+                        });
+                        markers.push(marker);
+                    }
+
+                    //为地图注册click事件获取鼠标点击出的经纬度坐标
+                    var clickEventListener = map.on('click', function(e) {
+                        $("#[type]{$group_k|default=''}_map_input_{$[type]k}").val(e.lnglat.getLat() + ',' + e.lnglat.getLng());
+                        map.remove(markers);
+                        marker = new AMap.Marker({
+                            position: [e.lnglat.getLng(), e.lnglat.getLat()],
+                            title: '选中的位置',
+                            map: map,
+                            animation: 'AMAP_ANIMATION_DROP',
+                        });
+                        markers.push(marker);
+                    });
+
+                    // 插件引入与对象创建
+                    AMap.service('AMap.Geocoder', function() { //回调函数
+                        //实例化Geocoder
+                        geocoder = new AMap.Geocoder({
+                            city: "<?php echo $[type]form['extra']['self']['city']?: '025'?>" //城市,电话区号
+                        });
+                        //TODO: 使用geocoder 对象完成相关功能
+                    })
+
+                    // 监听联动输入框，自动重新定位
+                    var auto = "{$[type]form['extra']['self']['auto']}";
+                    if (auto) {
+                        $(".item_{$[type]form['extra']['self']['auto']} input[name={$[type]form['extra']['self']['auto']}]").keyup(function() {
+                            var tmp = $(this).val();
+                            if (tmp) {
+                                // 将地址解析结果显示在地图上，并调整地图视野。此过程为异步，所以要重设标注
+                                geocoder.getLocation(tmp, function(status, result) {
+                                    if (status === 'complete' && result.info === 'OK') {
+                                        // 搜索成功
+                                        var lng = parseFloat(result.geocodes[0].location.lng);
+                                        var lat = parseFloat(result.geocodes[0].location.lat);
+                                        $("#[type]{$group_k|default=''}_map_input_{$[type]k}").val(lat + ',' + lng);
+                                        map.remove(markers);
+                                        marker = new AMap.Marker({
+                                            position: [lng, lat],
+                                            title: '选中的位置',
+                                            map: map,
+                                        });
+                                        markers.push(marker);
+                                    } else {
+                                        // 获取经纬度失败
+                                        alert('获取经纬度失败');
+                                    }
+                                });
+
+                            }
+                        });
+                    }
+                });
+            </script>
+        </div>
+    </div>
+</case>
